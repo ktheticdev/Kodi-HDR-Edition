@@ -213,7 +213,7 @@ void CMediaCodecVideoBuffer::UpdateTexImage()
   // we hook the SurfaceTexture OnFrameAvailable callback
   // using CJNISurfaceTextureOnFrameAvailableListener and wait
   // on a CEvent to fire. 50ms seems to be a good max fallback.
-  WaitForFrame(50);
+  WaitForFrame(500);
 
   m_surfacetexture->updateTexImage();
   if (xbmc_jnienv()->ExceptionCheck())
@@ -724,7 +724,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
   if (m_render_surface)
   {
     m_jnivideoview.reset(CJNIXBMCVideoView::createVideoView(this));
-    if (!m_jnivideoview || !m_jnivideoview->waitForSurface(2000))
+    if (!m_jnivideoview || !m_jnivideoview->waitForSurface(10000))
     {
       CLog::Log(LOGERROR, "CDVDVideoCodecAndroidMediaCodec: VideoView creation failed!!");
       goto FAIL;
@@ -791,8 +791,8 @@ FAIL:
 
 void CDVDVideoCodecAndroidMediaCodec::Dispose()
 {
-  if (!m_opened)
-    return;
+ if (!m_opened)
+   return;
 
   CLog::Log(LOGDEBUG, "CDVDVideoCodecAndroidMediaCodec::%s", __func__);
 
@@ -815,6 +815,7 @@ void CDVDVideoCodecAndroidMediaCodec::Dispose()
     xbmc_jnienv()->ExceptionClear();
     m_codec = nullptr;
     m_state = MEDIACODEC_STATE_STOPPED;
+    
   }
   ReleaseSurfaceTexture();
 
@@ -1087,7 +1088,6 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAndroidMediaCodec::GetPicture(VideoPictur
           static_cast<CMediaCodecVideoBuffer*>(m_videobuffer.videoBuffer)->GetBufferId(), pVideoPicture->pts);
 
       m_videobuffer.videoBuffer = nullptr;
-
       return VC_PICTURE;
     }
     else
@@ -1113,9 +1113,12 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAndroidMediaCodec::GetPicture(VideoPictur
       if (xbmc_jnienv()->ExceptionCheck())
       {
         xbmc_jnienv()->ExceptionClear();
+        sleep (500);
         CLog::Log(LOGERROR,
                   "CDVDVideoCodecAndroidMediaCodec::GetPicture dequeueInputBuffer failed");
-        m_indexInputBuffer = -1;
+        //m_indexInputBuffer = -1;
+        Reset();
+        sleep (500);
       }
     }
 
@@ -1177,8 +1180,10 @@ void CDVDVideoCodecAndroidMediaCodec::SignalEndOfStream()
       if (xbmc_jnienv()->ExceptionCheck())
       {
         xbmc_jnienv()->ExceptionClear();
+        sleep (500);
         CLog::Log(LOGERROR,
                   "CDVDVideoCodecAndroidMediaCodec::SignalEndOfStream: dequeueInputBuffer failed");
+        Reset();
       }
     }
 
@@ -1379,6 +1384,7 @@ int CDVDVideoCodecAndroidMediaCodec::GetOutputPicture(void)
     xbmc_jnienv()->ExceptionClear();
     CLog::Log(LOGERROR,
               "CDVDVideoCodecAndroidMediaCodec:GetOutputPicture dequeueOutputBuffer failed");
+    sleep (500);
     return -2;
   }
 
@@ -1630,5 +1636,16 @@ void CDVDVideoCodecAndroidMediaCodec::surfaceDestroyed(CJNISurfaceHolder holder)
       m_jnivideosurface.release();
     m_codec->stop();
     xbmc_jnienv()->ExceptionClear();
+    sleep(50);
+    m_jnivideosurface.release();
+    m_codec->stop();
+    xbmc_jnienv()->ExceptionClear();
+
+    sleep(100);
+    m_jnivideosurface.release();
+    m_codec->stop();
+    xbmc_jnienv()->ExceptionClear();
+    Dispose();
+    
   }
 }
