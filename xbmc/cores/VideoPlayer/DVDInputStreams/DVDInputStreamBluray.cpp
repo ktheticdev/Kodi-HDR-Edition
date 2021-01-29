@@ -485,11 +485,13 @@ void CDVDInputStreamBluray::ProcessEvent() {
   {
     CLog::Log(LOGDEBUG, "CDVDInputStreamBluray - BD_EVENT_TITLE %d", m_event.param);
     const BLURAY_DISC_INFO* disc_info = bd_get_disc_info(m_bd);
+    m_isInMainMenu = false;
 
     if (m_event.param == BLURAY_TITLE_TOP_MENU)
     {
       m_title = disc_info->top_menu;
       m_menu = true;
+      m_isInMainMenu = true;
       break;
     }
     else if (m_event.param == BLURAY_TITLE_FIRST_PLAY)
@@ -499,6 +501,7 @@ void CDVDInputStreamBluray::ProcessEvent() {
     else
       m_title = nullptr;
     m_menu = false;
+    m_isInMainMenu = false;
 
     break;
   }
@@ -548,6 +551,8 @@ void CDVDInputStreamBluray::ProcessEvent() {
     CLog::Log(LOGDEBUG, "CDVDInputStreamBluray - BD_EVENT_MENU %d",
         m_event.param);
     m_menu = (m_event.param != 0);
+    if (m_menu == false)
+      m_isInMainMenu = false;
     break;
 
   case BD_EVENT_IDLE:
@@ -759,6 +764,7 @@ void CDVDInputStreamBluray::OverlayFlush(int64_t pts)
 
   m_player->OnDiscNavResult(static_cast<void*>(group), BD_EVENT_MENU_OVERLAY);
   group->Release();
+  m_menu = true;
 #endif
 }
 
@@ -1114,6 +1120,8 @@ void CDVDInputStreamBluray::OnMenu()
   if(bd_user_input(m_bd, -1, BD_VK_POPUP) >= 0)
   {
     m_menu = !m_menu;
+    if (!m_menu)
+      m_isInMainMenu = false;
     return;
   }
   CLog::Log(LOGDEBUG, "CDVDInputStreamBluray::OnMenu - popup failed, trying root");
@@ -1149,6 +1157,11 @@ void CDVDInputStreamBluray::SkipStill()
     while (bd_get_event(m_bd, &m_event))
       ProcessEvent();
   }
+}
+
+bool CDVDInputStreamBluray::CanBeSeeked()
+{
+  return !IsInMenu() || !m_isInMainMenu;
 }
 
 bool CDVDInputStreamBluray::HasMenu()
