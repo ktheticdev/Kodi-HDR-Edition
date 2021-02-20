@@ -1773,9 +1773,11 @@ bool CVideoPlayer::GetCachingTimes(double& level, double& delay, double& offset)
 
 void CVideoPlayer::HandlePlaySpeed()
 {
-  bool isInMenu = IsInMenuInternal();
+  const bool isInMenu = IsInMenuInternal();
+  const bool tolerateStall =
+      isInMenu || (m_CurrentVideo.hint.flags & StreamFlags::FLAG_STILL_IMAGES);
 
-  if (isInMenu && m_caching != CACHESTATE_DONE)
+  if (tolerateStall && m_caching != CACHESTATE_DONE)
     SetCaching(CACHESTATE_DONE);
 
   if (m_caching == CACHESTATE_FULL)
@@ -1835,9 +1837,9 @@ void CVideoPlayer::HandlePlaySpeed()
 
   if (m_caching == CACHESTATE_DONE)
   {
-    if (m_playSpeed == DVD_PLAYSPEED_NORMAL && !isInMenu)
+    if (m_playSpeed == DVD_PLAYSPEED_NORMAL && !tolerateStall)
     {
-      // take action is audio or video stream is stalled
+      // take action if audio or video stream is stalled
       if (((m_VideoPlayerAudio->IsStalled() && m_CurrentAudio.inited) ||
            (m_VideoPlayerVideo->IsStalled() && m_CurrentVideo.inited)) &&
           m_syncTimer.IsTimePast())
@@ -3912,7 +3914,7 @@ int CVideoPlayer::OnDiscNavResult(void* pData, int iMessage)
           if (time < 10000 && time > 0)
             m_dvd.iDVDStillTime += time;
         }
-        m_dvd.state = DVDSTATE_STILL;
+      //  m_dvd.state = DVDSTATE_STILL;
         CLog::Log(LOGDEBUG,
           "BD_EVENT_STILL_TIME - waiting %i sec, with delay of %d sec",
           m_dvd.iDVDStillTime, time / 1000);
@@ -4112,7 +4114,14 @@ int CVideoPlayer::OnDiscNavResult(void* pData, int iMessage)
       {
         CLog::Log(LOGDEBUG, "DVDNAV_STOP");
         m_dvd.state = DVDSTATE_NORMAL;
-        CGUIDialogKaiToast::QueueNotification(g_localizeStrings.Get(16026), g_localizeStrings.Get(16029));
+      }
+      break;
+    case DVDNAV_ERROR:
+      {
+        CLog::Log(LOGDEBUG, "DVDNAV_ERROR");
+        m_dvd.state = DVDSTATE_NORMAL;
+        CGUIDialogKaiToast::QueueNotification(g_localizeStrings.Get(16026),
+                                              g_localizeStrings.Get(16029));
       }
       break;
     default:
@@ -5104,7 +5113,7 @@ void CVideoPlayer::GetSubtitleStreamInfo(int index, SubtitleStreamInfo &info)
 {
   CSingleLock lock(m_content.m_section);
 
-  if (index == CURRENT_STREAM && GetSubtitleVisible())
+  if (index == CURRENT_STREAM)
     index = m_content.m_subtitleIndex;
 
   if (index < 0 || index > GetSubtitleCount() - 1)

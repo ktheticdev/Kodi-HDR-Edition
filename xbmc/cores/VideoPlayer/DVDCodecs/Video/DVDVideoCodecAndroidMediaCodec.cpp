@@ -636,8 +636,10 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
       continue;
 
     m_codecname = codec_info.getName();
-    if (!CServiceBroker::GetDecoderFilterManager()->isValid(m_codecname, m_hints))
-      continue;
+    // this check has to go to enable bluray menus to run properly
+   // if (!CServiceBroker::GetDecoderFilterManager()->isValid(m_codecname))
+   //   continue;
+   
 
     CLog::Log(LOGINFO, "CDVDVideoCodecAndroidMediaCodec::Open Testing codec:%s",
               m_codecname.c_str());
