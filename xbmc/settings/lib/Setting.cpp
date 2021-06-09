@@ -66,18 +66,22 @@ bool DeserializeOptionsSort(const TiXmlElement* optionsElement, SettingOptionsSo
   return true;
 }
 
+Logger CSetting::s_logger;
+
 CSetting::CSetting(const std::string& id,
                    CSettingsManager* settingsManager /* = nullptr */,
                    const std::string& name /* = "CSetting" */)
-  : ISetting(id, settingsManager), CStaticLoggerBase(name)
-{ }
+  : ISetting(id, settingsManager)
+{
+  if (s_logger == nullptr)
+    s_logger = CServiceBroker::GetLogging().GetLogger(name);
+}
 
 CSetting::CSetting(const std::string& id,
                    const CSetting& setting,
                    const std::string& name /* = "CSetting" */)
-  : ISetting(id, setting.m_settingsManager), CStaticLoggerBase(name)
+  : CSetting(id, setting.m_settingsManager, name)
 {
-  m_id = id;
   Copy(setting);
 }
 
@@ -1137,7 +1141,9 @@ CSettingNumber::CSettingNumber(const std::string& id,
                                int label,
                                float value,
                                CSettingsManager* settingsManager /* = nullptr */)
-  : CTraitedSetting(id, settingsManager, "CSettingNumber"), m_value(value), m_default(value)
+  : CTraitedSetting(id, settingsManager, "CSettingNumber"),
+    m_value(static_cast<double>(value)),
+    m_default(static_cast<double>(value))
 {
   SetLabel(label);
 }
@@ -1150,11 +1156,11 @@ CSettingNumber::CSettingNumber(const std::string& id,
                                float maximum,
                                CSettingsManager* settingsManager /* = nullptr */)
   : CTraitedSetting(id, settingsManager, "CSettingNumber"),
-    m_value(value),
-    m_default(value),
-    m_min(minimum),
-    m_step(step),
-    m_max(maximum)
+    m_value(static_cast<double>(value)),
+    m_default(static_cast<double>(value)),
+    m_min(static_cast<double>(minimum)),
+    m_step(static_cast<double>(step)),
+    m_max(static_cast<double>(maximum))
 {
   SetLabel(label);
 }

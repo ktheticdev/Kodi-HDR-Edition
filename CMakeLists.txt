@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.4)
+if(WIN32)
+  # Version 3.15 is required to use "PREPEND" for dependencies
+  cmake_minimum_required(VERSION 3.15)
+endif()
 project(kodi LANGUAGES CXX C ASM)
 
 if(POLICY CMP0069)
@@ -130,7 +134,7 @@ set(required_deps ASS
                   Iconv
                   LibDvd
                   Lzo2
-                  OpenSSL>=1.0.2
+                  OpenSSL>=1.1.0
                   PCRE
                   RapidJSON
                   Spdlog
@@ -160,6 +164,7 @@ set(optional_deps Alsa
                   MDNS
                   MicroHttpd
                   NFS
+                  Pipewire
                   Plist
                   PulseAudio
                   Python

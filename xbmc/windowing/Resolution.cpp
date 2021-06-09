@@ -81,9 +81,8 @@ RESOLUTION CResolutionUtils::ChooseBestResolution(float fps, int width, int heig
     }
   }
 
-  CLog::Log(LOGINFO, "Display resolution ADJUST : %s (%d) (weight: %.3f)",
-            CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(res).strMode.c_str(), res,
-            weight);
+  CLog::Log(LOGINFO, "Display resolution ADJUST : {} ({}) (weight: {:.3f})",
+            CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(res).strMode, res, weight);
   return res;
 }
 
@@ -96,7 +95,9 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
 
   std::vector<CVariant> indexList = CServiceBroker::GetSettingsComponent()->GetSettings()->GetList(CSettings::SETTING_VIDEOSCREEN_WHITELIST);
 
-  if (indexList.empty())
+  bool noWhiteList = indexList.empty();
+
+  if (noWhiteList)
   {
     CLog::Log(LOGDEBUG,
               "[WHITELIST] Using the default whitelist because the user whitelist is empty");
@@ -156,7 +157,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
   if (!found)
     CLog::Log(LOGDEBUG, "[WHITELIST] No match for an exact resolution with an exact refresh rate");
 
-  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+  if (noWhiteList || CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
           SETTING_VIDEOSCREEN_WHITELIST_DOUBLEREFRESHRATE))
   {
     CLog::Log(LOGDEBUG,
@@ -195,7 +196,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
   else if (found)
     return;
 
-  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+  if (noWhiteList || CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
           SETTING_VIDEOSCREEN_WHITELIST_PULLDOWN))
   {
     CLog::Log(LOGDEBUG,
@@ -257,7 +258,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
 
   CLog::Log(LOGDEBUG, "[WHITELIST] No match for a desktop resolution with an exact refresh rate");
 
-  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+  if (noWhiteList || CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
           SETTING_VIDEOSCREEN_WHITELIST_DOUBLEREFRESHRATE))
   {
     CLog::Log(LOGDEBUG,
@@ -286,7 +287,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
               "[WHITELIST] No match for a desktop resolution with double the refresh rate");
   }
 
-  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+  if (noWhiteList || CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
           SETTING_VIDEOSCREEN_WHITELIST_PULLDOWN))
   {
     CLog::Log(LOGDEBUG,
@@ -350,15 +351,18 @@ bool CResolutionUtils::FindResolutionFromOverride(float fps, int width, bool is3
 
           if (fallback)
           {
-            CLog::Log(LOGDEBUG, "Found Resolution %s (%d) from fallback (refreshmin:%.3f refreshmax:%.3f)",
-                      info.strMode.c_str(), resolution,
-                      override.refreshmin, override.refreshmax);
+            CLog::Log(
+                LOGDEBUG,
+                "Found Resolution {} ({}) from fallback (refreshmin:{:.3f} refreshmax:{:.3f})",
+                info.strMode, resolution, override.refreshmin, override.refreshmax);
           }
           else
           {
-            CLog::Log(LOGDEBUG, "Found Resolution %s (%d) from override of fps %.3f (fpsmin:%.3f fpsmax:%.3f refreshmin:%.3f refreshmax:%.3f)",
-                      info.strMode.c_str(), resolution, fps,
-                      override.fpsmin, override.fpsmax, override.refreshmin, override.refreshmax);
+            CLog::Log(LOGDEBUG,
+                      "Found Resolution {} ({}) from override of fps {:.3f} (fpsmin:{:.3f} "
+                      "fpsmax:{:.3f} refreshmin:{:.3f} refreshmax:{:.3f})",
+                      info.strMode, resolution, fps, override.fpsmin, override.fpsmax,
+                      override.refreshmin, override.refreshmax);
           }
 
           weight = RefreshWeight(info.fRefreshRate, fps);
@@ -376,14 +380,14 @@ bool CResolutionUtils::FindResolutionFromOverride(float fps, int width, bool is3
 float CResolutionUtils::RefreshWeight(float refresh, float fps)
 {
   float div   = refresh / fps;
-  int   round = MathUtils::round_int(div);
+  int round = MathUtils::round_int(static_cast<double>(div));
 
   float weight = 0.0f;
 
   if (round < 1)
     weight = (fps - refresh) / fps;
   else
-    weight = (float)fabs(div / round - 1.0);
+    weight = fabs(div / round - 1.0f);
 
   // punish higher refreshrates and prefer better matching
   // e.g. 30 fps content at 60 hz is better than
@@ -392,7 +396,7 @@ float CResolutionUtils::RefreshWeight(float refresh, float fps)
   // punish when refreshrate > 60 hz to not have to switch
   // twice for 30i content
   if (refresh > 60 && round > 1)
-    weight += round / 10000.0;
+    weight += round / 10000.0f;
 
   return weight;
 }
