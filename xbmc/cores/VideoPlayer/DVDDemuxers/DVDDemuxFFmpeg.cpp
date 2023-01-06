@@ -39,6 +39,7 @@
 
 extern "C"
 {
+#include "libavutil/dovi_meta.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/pixdesc.h"
 }
@@ -1715,6 +1716,21 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         if (!stereoMode.empty())
           st->stereo_mode = stereoMode;
 
+        if (m_bMatroska)
+        {
+        size_t size = 0;
+        uint8_t* side_data = nullptr;
+
+          side_data = av_stream_get_side_data(pStream, AV_PKT_DATA_DOVI_CONF, &size);
+          if (size > 0 && side_data)
+          {
+            auto dovi = reinterpret_cast<AVDOVIDecoderConfigurationRecord*>(side_data);
+            if (dovi->dv_profile > 7)
+              pStream->codecpar->codec_tag = MKBETAG('d', 'v', 'v', 'C');
+            else
+              pStream->codecpar->codec_tag = MKBETAG('d', 'v', 'c', 'C');
+          }
+        }
 
         if (m_pInput->IsStreamType(DVDSTREAM_TYPE_DVD))
         {
